@@ -38,3 +38,15 @@ Streets or towns with fewer than 3 sales get a page marked `noindex` and are lef
 address for canonical links and the sitemap.
 
 About 11,000 files: under Cloudflare Pages' 20,000-file limit per deployment.
+
+## Publishing
+
+`.github/workflows/build.yml` rebuilds the site every Tuesday morning (GURS updates weekly), on a
+manual run, and when the code changes, and publishes `public/` to the Cloudflare Pages project
+`cene-nepremicnin` (created on the first run). It needs the repository secrets
+`CLOUDFLARE_API_TOKEN` (permission Account → Cloudflare Pages → Edit) and `CLOUDFLARE_ACCOUNT_ID`.
+
+The site is then at `cene-nepremicnin.pages.dev`. For `cene-nepremicnin.si`: add the domain to
+Cloudflare (Websites → Add a site, free plan), set the nameservers it gives at the .si registrar,
+then Workers & Pages → cene-nepremicnin → Custom domains → add `cene-nepremicnin.si` (and `www`).
+Finally submit `https://cene-nepremicnin.si/sitemap.xml` in Google Search Console.

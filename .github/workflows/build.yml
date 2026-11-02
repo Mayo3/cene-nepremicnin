@@ -1,0 +1,39 @@
+name: build
+
+# Every Tuesday: download GURS's latest sales (updated weekly), rebuild the site and publish it
+# to Cloudflare Pages as "cene-nepremicnin". Needs the secrets CLOUDFLARE_API_TOKEN (Account →
+# Cloudflare Pages → Edit) and CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  schedule:
+    - cron: "30 4 * * 2" # 05:30 CET / 06:30 CEST
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["build.py", "static/**", ".github/workflows/build.yml"]
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build
+        run: python build.py public
+
+      - name: Publish to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4 pages project create cene-nepremicnin --production-branch main >/dev/null 2>&1 || true
+          npx --yes wrangler@4 pages deploy public --project-name cene-nepremicnin --branch main --commit-dirty=true

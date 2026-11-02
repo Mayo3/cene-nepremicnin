@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 CACHE = ROOT / "data"
-SITE_URL = os.environ.get("SITE_URL", "https://cene-nepremicnin.pages.dev").rstrip("/")
+SITE_URL = os.environ.get("SITE_URL", "https://cene-nepremicnin.si").rstrip("/")
 SITE_NAME = "Prodajne cene nepremičnin"
 API = "https://ipi.eprostor.gov.si/jgp-service-api/display-views/groups/127/composite-products/321"
 DWELLINGS = {"1": "hisa", "2": "stanovanje"}      # Vrsta dela stavbe: house, flat
