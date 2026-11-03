@@ -1,4 +1,4 @@
-# Prodajne cene nepremičnin
+# cenenepremicnin.si
 
 A static website showing what flats and houses actually sold for in Slovenia, with a page for
 every municipality, town and street. Listing sites show asking prices; this shows sale prices.
@@ -20,18 +20,30 @@ with sales appearing a few months after the contract.
 
 Kept: open-market sales of exactly one whole flat or house (a garage, parking space or storage
 room may be included), with a price of at least €10.000, at least 12 m², and €300 to €20.000 per
-m². Each year's file also holds older contracts registered late; only sales from the chosen years
-are kept. The public files have no floor or room count.
+m². Sales to family members are a separate deal type in the register and are left out; because most
+sales are still marked "being checked", flats below 40% and houses below 30% of the municipality's
+median €/m² are also left out (`CHEAP` in `build.py`). Each year's file also holds older contracts
+registered late; only sales from the chosen years are kept. The public files have no floor or room
+count.
 
 **Privacy:** pages show street and house number but not the flat number, so a sale isn't tied
 to a particular home. The register's buyers and sellers are not public and never appear.
 
 ## Pages
 
-- `/` – search (streets, towns, municipalities; `search.json`), national figures, municipalities
-- `/<municipality>/` – figures, towns, prices by year, latest 150 sales
-- `/<municipality>/<town>/` – figures, streets, prices by year, sales (latest 150 in big towns)
-- `/<municipality>/<town>/<street>/` – every sale on the street, prices by year
+- `/` – search (streets, towns, municipalities; `search.json`), national figures and price chart,
+  latest sales, municipalities, FAQ
+- `/<municipality>/` – figures, comparison with Slovenia, price chart, towns, latest 150 sales
+- `/<municipality>/<town>/` – figures, comparison with the municipality, price chart, streets, sales
+  (latest 150 in big towns)
+- `/<municipality>/<town>/<street>/` – every sale on the street, comparison with the town, price chart
+- `/zemljevid/` – map of every sold building, coloured by €/m² (`map.json`, `static/map.js`; MapLibre
+  with OpenFreeMap tiles, free and keyless)
+- `/lestvice/` – municipalities and towns ranked by €/m² over the last two years
+- `/o-podatkih/` – where the data comes from and what is left out
+
+Price charts are inline SVG drawn by `build.py` (by quarter where a place has 200+ sales, else by
+year). Headings use Source Serif 4, self-hosted in `static/fonts/` (SIL Open Font License).
 
 Streets or towns with fewer than 3 sales get a page marked `noindex` and are left out of
 `sitemap.xml`, so search engines see only pages with real content. Set `SITE_URL` to the site's
