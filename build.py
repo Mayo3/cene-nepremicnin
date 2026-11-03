@@ -11,6 +11,8 @@ Set SITE_URL for canonical links and the sitemap. Standard library only.
 import csv
 import html
 import io
+import functools
+import hashlib
 import json
 import math
 import os
@@ -225,6 +227,12 @@ NAV = (("Zemljevid", "zemljevid/"), ("Lestvice", "lestvice/"), ("O podatkih", "o
 BRAND = '<a class="brand" href="/">cenenepremicnin<span>.si</span></a>'
 
 
+@functools.cache
+def asset(name):
+    """/name?v=<content hash>: browsers keep static files for hours, so a changed file needs a new address."""
+    return f"/{name}?v={hashlib.sha256((ROOT / 'static' / name).read_bytes()).hexdigest()[:8]}"
+
+
 def page(path, title, description, body, crumbs=(), index=True, head="", scripts=""):
     url = f"{SITE_URL}/{path}"
     trail = "".join(f'<a href="/{esc(p)}">{esc(t)}</a> › ' for t, p in crumbs)
@@ -235,7 +243,7 @@ def page(path, title, description, body, crumbs=(), index=True, head="", scripts
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(description)}">
 <link rel="canonical" href="{esc(url)}">{'' if index else chr(10) + '<meta name="robots" content="noindex,follow">'}
-<link rel="stylesheet" href="/style.css">{head}
+<link rel="stylesheet" href="{asset('style.css')}">{head}
 </head><body>
 <header><div class="bar">{BRAND}<nav class="menu">{links}</nav>
 <form class="search" action="/" role="search"><input name="q" type="search" placeholder="Ulica, kraj ali občina" aria-label="Iskanje"></form></div></header>
@@ -248,7 +256,7 @@ def page(path, title, description, body, crumbs=(), index=True, head="", scripts
 <nav>{links}<a href="/">Iskanje</a></nav></div>
 <p>Vir podatkov: Geodetska uprava RS, Evidenca trga nepremičnin (javni geodetski podatki, CC BY 4.0),
 osveženo {day(date.today().isoformat())}. Cene hiš vključujejo zemljišče. Podatki so informativni.</p></footer>
-<script src="/search.js" defer></script>{scripts}
+<script src="{asset('search.js')}" defer></script>{scripts}
 </body></html>"""
 
 
@@ -498,7 +506,7 @@ def map_page(rows):
 <div id="map" class="map"></div>
 <p class="map-legend"><b>€ na m²</b> {legend}</p>""",
         head='\n<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">',
-        scripts='\n<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>\n<script src="/map.js" defer></script>')
+        scripts=f'\n<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>\n<script src="{asset("map.js")}" defer></script>')
 
 
 def map_data(rows):
