@@ -50,10 +50,18 @@ def download(year):
     CACHE.mkdir(exist_ok=True)
     path = CACHE / f"ETN_{year}.zip"
     if not path.exists() or time.time() - path.stat().st_mtime > 6 * 86400:
-        with urllib.request.urlopen(f"{API}/file?filterParam=DRZAVA&filterValue=1&filterYear={year}", timeout=60) as r:
-            link = json.load(r)["url"]            # a short-lived link to the zip
-        with urllib.request.urlopen(link, timeout=300) as r:
-            path.write_bytes(r.read())
+        for attempt in range(3):                  # GURS's service fails now and then
+            try:
+                with urllib.request.urlopen(f"{API}/file?filterParam=DRZAVA&filterValue=1&filterYear={year}", timeout=60) as r:
+                    link = json.load(r)["url"]    # a short-lived link to the zip
+                with urllib.request.urlopen(link, timeout=300) as r:
+                    path.write_bytes(r.read())
+                break
+            except (OSError, ValueError, KeyError) as e:   # network error, or an error page instead of the link
+                if attempt == 2:
+                    raise
+                print(f"{year}: download failed ({e}), trying again in 30 s")
+                time.sleep(30)
     return zipfile.ZipFile(path)
 
 
