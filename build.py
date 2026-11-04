@@ -32,6 +32,7 @@ ROOT = Path(__file__).parent
 CACHE = ROOT / "data"
 SITE_URL = os.environ.get("SITE_URL", "https://cenenepremicnin.si").rstrip("/")
 SITE_NAME = "cenenepremicnin.si"
+STREETVIEW_KEY = os.environ.get("STREETVIEW_KEY", "")   # Google key for building photos; without it, only a link
 API = "https://ipi.eprostor.gov.si/jgp-service-api/display-views/groups/127/composite-products/321"
 DWELLINGS = {"1": "hisa", "2": "stanovanje"}      # Vrsta dela stavbe: house, flat
 EXTRAS = {"3", "4", "14"}                         # parking space, garage, storage/technical rooms
@@ -252,7 +253,7 @@ def page(path, title, description, body, crumbs=(), index=True, head="", scripts
 <meta name="description" content="{esc(description)}">
 <link rel="canonical" href="{esc(url)}">{'' if index else chr(10) + '<meta name="robots" content="noindex,follow">'}
 <link rel="stylesheet" href="{asset('style.css')}">{head}
-</head><body>
+</head><body{f' data-streetview-key="{esc(STREETVIEW_KEY)}"' if STREETVIEW_KEY else ''}>
 <header><div class="bar">{BRAND}<nav class="menu">{links}</nav>
 <form class="search" action="/" role="search"><input name="q" type="search" placeholder="Ulica, kraj ali občina" aria-label="Iskanje"></form></div></header>
 <main>
@@ -264,7 +265,7 @@ def page(path, title, description, body, crumbs=(), index=True, head="", scripts
 <nav>{links}<a href="/">Iskanje</a></nav></div>
 <p>Vir podatkov: Geodetska uprava RS, Evidenca trga nepremičnin (javni geodetski podatki, CC BY 4.0),
 osveženo {day(date.today().isoformat())}. Cene hiš vključujejo zemljišče. Podatki so informativni.</p></footer>
-<script src="{asset('search.js')}" defer></script>{scripts}
+<script src="{asset('search.js')}" defer></script><script src="{asset('photo.js')}" defer></script>{scripts}
 </body></html>"""
 
 
@@ -318,12 +319,11 @@ def comparison(here, rows, there, parent, since):
     return ""
 
 
-def map_link(rows, zoom):
-    at = [s["at"] for s in rows if s["at"]]
-    if not at:
+def map_link(rows, path):
+    """A link to the map and list of sales, already filtered to this place."""
+    if not any(s["at"] for s in rows):
         return ""
-    lat, lon = statistics.median(a[0] for a in at), statistics.median(a[1] for a in at)
-    return f'<p class="maplink"><a href="/zemljevid/#{zoom}/{lat:.4f}/{lon:.4f}">Prodaje na zemljevidu →</a></p>'
+    return f'<p class="maplink"><a href="/zemljevid/?kje={esc(path)}">Zemljevid in filtri: leto, velikost, cena →</a></p>'
 
 
 @memo
@@ -422,14 +422,14 @@ def places(title, items):
 def sale_table(rows, show_town, limit=None, title="Prodaje", note=True):
     shown = rows[:limit] if limit else rows
     def where(s):
-        street = s["street"] or (s["town"] if not show_town else "")
-        addr = f"{street} {s['number']}".strip()
-        return ", ".join(x for x in (addr, s["town"] if show_town and s["street"] else "") if x) or s["town"]
+        addr = f"{s['street'] or s['town']} {s['number']}".strip()     # villages without streets: 'Gračišče 3'
+        return f"{addr}, {s['town']}" if show_town and s["street"] else addr
     def row(s):
         kind = ("Stanovanje" if s["kind"] == "stanovanje" else "Hiša") + (" · novogradnja" if s["new"] else "")
         size = f"{s['area']:g}".replace(".", ",") + " m²"
         meta = " · ".join(x for x in (day(s["day"]), kind.lower(), size, f"zgrajeno {s['built']}" if s["built"] else "") if x)
-        return (f'<tr><td class="d">{day(s["day"])}</td><td class="k">{kind}</td><td class="a">{esc(where(s))}</td>'
+        at = f' data-at="{s["at"][0]},{s["at"][1]}"' if s["at"] else ""
+        return (f'<tr{at}><td class="d">{day(s["day"])}</td><td class="k">{kind}</td><td class="a">{esc(where(s))}</td>'
                 f'<td class="n s">{size}</td><td class="n y">{s["built"] or "–"}</td><td class="n p"><b>{eur(s["price"])}</b></td>'
                 f'<td class="n m">{eur(per_m2(s))}/m²</td><td class="meta">{meta}</td></tr>')
     more = (f'<p class="note">Prikazanih je zadnjih {len(shown)} od {len(rows)} prodaj; vse najdete na straneh posameznih ulic in krajev.</p>'
@@ -488,7 +488,7 @@ def home(rows, stats, munis):
 <form class="big-search" action="/" role="search"><input id="q" name="q" type="search" autocomplete="off"
 placeholder="Vpišite ulico, kraj ali občino, npr. Celovška cesta" aria-label="Iskanje"></form>
 <ul id="results" class="results"></ul>
-<p class="maplink"><a href="/zemljevid/">Vse prodaje na zemljevidu →</a></p>
+<p class="maplink"><a href="/zemljevid/">Filtriraj prodaje po kraju, letu, velikosti in ceni →</a></p>
 {figures(stats)}
 {trend([("Stanovanja", rows, "stanovanje"), ("Hiše", rows, "hisa")])}
 {sale_table(rows, True, 15, "Zadnje vpisane prodaje", note=False)}
@@ -504,15 +504,28 @@ def map_page(rows):
     legend = "".join(f'<span><i style="background:{c}"></i>{b}</span>' for c, b in zip(MAP_COLORS, bounds))
     return page(
         "zemljevid/", "Zemljevid prodaj stanovanj in hiš – cenenepremicnin.si",
-        "Zemljevid dejanskih prodaj stanovanj in hiš v Sloveniji: vsaka stavba s ceno na m² in seznamom prodaj.",
+        "Zemljevid in seznam dejanskih prodaj stanovanj in hiš v Sloveniji, s filtri po kraju, letu, velikosti in ceni.",
         f"""<h1>Zemljevid prodaj</h1>
-<p class="lead">Vsaka pika je stavba, v kateri je bilo prodano stanovanje ali hiša. Barva pove mediano cene na m²; kliknite piko za seznam prodaj.</p>
-<div class="controls">
+<p class="lead">Izberite kraj, leto in velikost: zemljevid in seznam pod njim pokažeta samo prodaje, ki ustrezajo. Vsaka pika je stavba, barva pove mediano cene na m².</p>
+<form id="filters" class="filters" role="search" autocomplete="off">
+<label class="where">Kraj ali ulica
+<span class="combo"><input id="place" type="search" placeholder="Občina, kraj ali ulica, npr. Koper" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list">
+<ul id="place-list" class="results" role="listbox"></ul></span></label>
 <label>Vrsta <select id="kind"><option value="">Stanovanja in hiše</option><option value="0">Stanovanja</option><option value="1">Hiše</option></select></label>
-<label>Obdobje <select id="period"><option value="">Vsa leta</option><option value="12">Zadnjih 12 mesecev</option>{options}</select></label>
-<span id="count" class="note"></span></div>
+<label>Leto prodaje <select id="period"><option value="">Vsa leta</option><option value="12">Zadnjih 12 mesecev</option>{options}</select></label>
+<fieldset><legend>Velikost (m²)</legend><input id="area-min" type="number" min="0" inputmode="numeric" placeholder="od" aria-label="Velikost od, m²"> – <input id="area-max" type="number" min="0" inputmode="numeric" placeholder="do" aria-label="Velikost do, m²"></fieldset>
+<fieldset class="wide"><legend>Cena (€)</legend><input id="price-min" type="number" min="0" step="1000" inputmode="numeric" placeholder="od" aria-label="Cena od, €"> – <input id="price-max" type="number" min="0" step="1000" inputmode="numeric" placeholder="do" aria-label="Cena do, €"></fieldset>
+<button id="clear" type="button" hidden>Počisti filtre</button>
+</form>
+<p id="count" class="tally" role="status"></p>
 <div id="map" class="map"></div>
-<p class="map-legend"><b>€ na m²</b> {legend}</p>""",
+<p class="map-legend"><b>€ na m²</b> {legend}</p>
+<h2>Prodaje</h2>
+<div class="scroll"><table class="sales">
+<thead><tr><th>Datum</th><th>Vrsta</th><th>Naslov</th><th class="n">Velikost</th><th class="n">Cena</th><th class="n">Na m²</th><th class="meta"></th></tr></thead>
+<tbody id="sale-rows"></tbody></table></div>
+<p id="sale-note" class="note"></p>
+<button id="sale-more" type="button" hidden>Pokaži več</button>""",
         head='\n<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">',
         scripts=f'\n<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>\n<script src="{asset("map.js")}" defer></script>')
 
@@ -529,7 +542,7 @@ def map_data(rows):
             if path not in index:
                 index[path] = len(paths)
                 paths.append(path)
-            addr = ", ".join(x for x in (f"{s['street'] or ''} {s['number']}".strip(), s["town"]) if x)
+            addr = f"{s['street']} {s['number']}".strip() + f", {s['town']}" if s["street"] else f"{s['town']} {s['number']}".strip()
             b = buildings[s["at"]] = [s["at"][1], s["at"][0], index[path], addr, []]
         b[4].append([s["day"], 0 if s["kind"] == "stanovanje" else 1, s["area"], s["price"]])
     return json.dumps({"paths": paths, "buildings": list(buildings.values())}, ensure_ascii=False, separators=(",", ":"))
@@ -590,6 +603,8 @@ Cena hiše vključuje zemljišče, zato je njena cena na m² višja, kot bi bila
 <h2>Zasebnost</h2>
 <p>Pri prodajah sta prikazana ulica in hišna številka, številka stanovanja pa ne, zato prodaja ni povezana z določenim
 stanovanjem. Kupci in prodajalci v javnih podatkih niso navedeni. Na zemljevidu so prodaje prikazane na sredini stavbe.</p>
+<p>Slike stavb so iz storitve Google Street View in kažejo približen pogled s ceste, ne prodanega stanovanja. Slika se naloži
+šele, ko odprete podrobnosti stavbe ali kliknete »Slika«; takrat vaš brskalnik pošlje zahtevo Googlu.</p>
 <h2>Omejitve</h2>
 <p>Javni podatki ne vsebujejo nadstropja, števila sob ali stanja nepremičnine, zato je cena posamezne prodaje lahko
 precej drugačna od mediane kraja. Podatki so informativni in niso cenitev.</p>
@@ -640,7 +655,7 @@ def build(out, rows):
                     f"Za koliko so se dejansko prodala stanovanja in hiše na naslovu {where}: {sold(len(st_rows))} z datumi, velikostmi in cenami na m².",
                     f"<h1>{esc(st_name)}<small>{esc(t)}, občina {esc(m)}</small></h1>{intro('na tej ulici', st_rows)}"
                     f"{figures(summary(st_rows, since))}{comparison('na tej ulici', st_rows, f'v kraju {t}', t_rows, since)}"
-                    f"{map_link(st_rows, 16)}{trend([(st_name, st_rows, kind), (t, t_rows, kind)])}"
+                    f"{map_link(st_rows, st_path)}{trend([(st_name, st_rows, kind), (t, t_rows, kind)])}"
                     f"{sale_table(st_rows, False)}{by_year(st_rows)}",
                     crumbs=((m, m_path), (t, t_path)), index=indexed))
                 search.append([st_name, t, st_path, len(st_rows)])
@@ -653,7 +668,7 @@ def build(out, rows):
                 t_path, f"{t}: prodajne cene stanovanj in hiš" + (f" ({m})" if m != t else ""),
                 f"Dejanske prodajne cene nepremičnin v kraju {t}: {sold(len(t_rows))} stanovanj in hiš, cene na m² po ulicah in letih.",
                 f"<h1>{esc(t)}<small>občina {esc(m)}</small></h1>{intro('v kraju ' + t, t_rows)}{figures(summary(t_rows, since))}"
-                f"{comparison(f'v kraju {t}', t_rows, parent[0], parent[1], since)}{map_link(t_rows, 14)}"
+                f"{comparison(f'v kraju {t}', t_rows, parent[0], parent[1], since)}{map_link(t_rows, t_path)}"
                 f"{trend([(t, t_rows, kind), (parent[2], parent[1], kind)])}"
                 f"{places('Ulice', street_items)}{listing}{by_year(t_rows)}",
                 crumbs=((m, m_path),), index=len(t_rows) >= INDEX_MIN))
@@ -665,7 +680,7 @@ def build(out, rows):
             m_path, f"Občina {m}: prodajne cene stanovanj in hiš",
             f"Za koliko se prodajajo stanovanja in hiše v občini {m}: {sold(len(m_rows))}, cene na m² po krajih in letih.",
             f"<h1>Občina {esc(m)}</h1>{intro('v občini ' + m, m_rows)}{figures(summary(m_rows, since))}"
-            f"{comparison(f'v občini {m}', m_rows, 'v Sloveniji', rows, since)}{map_link(m_rows, 12)}"
+            f"{comparison(f'v občini {m}', m_rows, 'v Sloveniji', rows, since)}{map_link(m_rows, m_path)}"
             f"{trend([(m, m_rows, kind), ('Slovenija', rows, kind)])}"
             f"{places('Kraji', town_items)}{sale_table(m_rows, True, TABLE_MAX)}{by_year(m_rows)}"))
         search.append([m, "občina", m_path, len(m_rows)])

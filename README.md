@@ -37,8 +37,12 @@ to a particular home. The register's buyers and sellers are not public and never
 - `/<municipality>/<town>/` – figures, comparison with the municipality, price chart, streets, sales
   (latest 150 in big towns)
 - `/<municipality>/<town>/<street>/` – every sale on the street, comparison with the town, price chart
-- `/zemljevid/` – map of every sold building, coloured by €/m² (`map.json`, `static/map.js`; MapLibre
-  with OpenFreeMap tiles, free and keyless)
+- `/zemljevid/` – map and list of sales, filtered by place, kind, year, size and price. Filters are kept
+  in the address (`?kje=koper/&vrsta=0&leto=2026&m2od=40&m2do=50`), so a search can be shared and place
+  pages link to theirs. Dots are coloured by €/m² (`map.json`, `search.json`, `static/map.js`; MapLibre
+  with OpenFreeMap tiles, free and keyless). A building's details show its Street View photo when
+  `STREETVIEW_KEY` is set at build time, otherwise no photo. Sale tables on all pages
+  have the same photo behind a "Slika" button on each row (`static/photo.js`)
 - `/lestvice/` – municipalities and towns ranked by €/m² over the last two years
 - `/o-podatkih/` – where the data comes from and what is left out
 
@@ -57,6 +61,10 @@ About 11,000 files: under Cloudflare Pages' 20,000-file limit per deployment.
 manual run, and when the code changes, and publishes `public/` to the Cloudflare Pages project
 `cenenepremicnin` (created on the first run). It needs the repository secrets
 `CLOUDFLARE_API_TOKEN` (permission Account → Cloudflare Pages → Edit) and `CLOUDFLARE_ACCOUNT_ID`.
+
+For building photos, also add the secret `STREETVIEW_KEY`: a Google Cloud API key with the Street View
+Static API enabled. The key is visible in the page, so restrict it to the API and to the site's
+address, and set a daily quota in Google Cloud so that costs can't run away.
 
 The site is then at `cenenepremicnin.pages.dev`. For `cenenepremicnin.si`: add the domain to
 Cloudflare (Websites → Add a site, free plan), set the nameservers it gives at the .si registrar,

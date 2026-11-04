@@ -40,9 +40,11 @@ header { border-bottom: 3px double var(--rule); }
 .menu a[aria-current] { box-shadow: inset 0 -2px var(--accent); }
 .search { margin-left: auto; flex: 0 1 260px; }
 .search input { width: 100%; }
-input[type=search], select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 3px;
+input[type=search], input[type=number], select, button { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 3px;
   background: var(--bg); color: var(--text); }
-input[type=search]:focus, select:focus { outline: 2px solid var(--link); outline-offset: -1px; }
+input[type=search]:focus, input[type=number]:focus, select:focus, button:focus-visible { outline: 2px solid var(--link); outline-offset: -1px; }
+button { cursor: pointer; }
+button:hover { background: var(--hover); }
 
 main { max-width: 1040px; margin: 0 auto; padding: 8px 16px 16px; }
 .crumbs { font-size: 14px; color: var(--muted); margin-top: 12px; }
@@ -118,6 +120,7 @@ tbody tr:hover { background: var(--hover); }
   .sales td.p { display: block; grid-area: 1 / 2; }
   .sales td.meta { display: block; grid-area: 2 / 1; white-space: normal; font-size: 14px; color: var(--muted); }
   .sales td.m { display: block; grid-area: 2 / 2; font-size: 14px; }
+  .sales .photo-row td { display: block; grid-column: 1 / -1; }
 }
 
 /* search */
@@ -127,17 +130,40 @@ tbody tr:hover { background: var(--hover); }
 .results li a { display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; color: var(--text);
   border-bottom: 1px solid var(--line); }
 .results li:last-child a { border-bottom: 0; }
-.results li a:hover, .results li a:focus { background: var(--hover); text-decoration: none; }
+.results li a:hover, .results li a:focus, .results li a.active { background: var(--hover); text-decoration: none; }
 .results .ctx { color: var(--muted); font-size: 14px; white-space: nowrap; }
 
 /* map */
-.controls { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin: 20px 0 10px; font-size: 15px; }
-.controls label { display: flex; gap: 8px; align-items: center; }
-.map { height: min(72vh, 680px); min-height: 380px; border: 1px solid var(--rule); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 20px 0 0; }
+.filters label, .filters fieldset { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+.filters fieldset { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0; padding: 0; border: 0; }
+.filters legend { padding: 0 0 4px; font-size: 14px; }
+.filters input, .filters select, .filters button { height: 40px; font-size: 16px; color: var(--text); }   /* below 16px, iPhones zoom in on focus */
+.filters input[type=number] { width: 76px; appearance: textfield; }
+.filters input[type=number]::-webkit-inner-spin-button { appearance: none; }
+.filters .wide input[type=number] { width: 104px; }
+.filters .where { flex: 1 1 100%; }
+.combo { position: relative; display: block; }
+.combo input { width: 100%; }
+.combo .results { position: absolute; z-index: 10; top: 100%; left: 0; right: 0; background: var(--bg); font-size: 15px; }
+.tally { margin: 14px 0 10px; }
+.map { height: min(60vh, 560px); min-height: 340px; border: 1px solid var(--rule); }
+#sale-more { margin-top: 4px; }
+.details { margin-left: 10px; padding: 1px 7px; font-size: 13px; color: var(--link); }
+.photo { margin-bottom: 8px; }
+.photo img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #f1f0ea; }
+.photo .more { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.photo-row td { white-space: normal; }
+.photo-row .photo { max-width: 480px; margin: 2px 0 6px; }
+@media (max-width: 640px) {
+  .filters label:not(.where) { flex: 1 1 40%; }
+  .filters select { width: 100%; }
+}
 .map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 14px; margin: 10px 0 0; }
 .map-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.maplibregl-popup { z-index: 3; }   /* above the zoom buttons, which would cover its close button on a phone */
 .maplibregl-popup-content { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #16181b;
-  padding: 12px 14px; border-radius: 3px; max-width: 320px; }
+  padding: 12px 14px; border-radius: 3px; max-width: 320px; overflow-y: auto; }
 .maplibregl-popup-content b { display: block; margin-bottom: 6px; }
 .maplibregl-popup-content table { font-size: 13px; }
 .maplibregl-popup-content td { padding: 3px 10px 3px 0; border-color: #e3e1da; }
