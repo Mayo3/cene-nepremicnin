@@ -154,6 +154,7 @@ tbody tr:hover { background: var(--hover); }
 .photo img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #f1f0ea; }
 .photo .more { font-size: 13px; color: var(--muted); margin-top: 4px; }
 .photo-row td { white-space: normal; }
+.maplibregl-popup-content .photo a { margin-top: 4px; }
 .photo-row .photo { max-width: 480px; margin: 2px 0 6px; }
 @media (max-width: 640px) {
   .filters label:not(.where) { flex: 1 1 40%; }

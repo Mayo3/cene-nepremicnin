@@ -41,7 +41,7 @@ to a particular home. The register's buyers and sellers are not public and never
   in the address (`?kje=koper/&vrsta=0&leto=2026&m2od=40&m2do=50`), so a search can be shared and place
   pages link to theirs. Dots are coloured by €/m² (`map.json`, `search.json`, `static/map.js`; MapLibre
   with OpenFreeMap tiles, free and keyless). A building's details show its Street View photo when
-  `STREETVIEW_KEY` is set at build time, otherwise no photo. Sale tables on all pages
+  `STREETVIEW_KEY` is set at build time, and always a link to Street View. Sale tables on all pages
   have the same photo behind a "Slika" button on each row (`static/photo.js`)
 - `/lestvice/` – municipalities and towns ranked by €/m² over the last two years
 - `/o-podatkih/` – where the data comes from and what is left out

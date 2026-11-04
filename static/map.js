@@ -322,7 +322,7 @@
         "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 0, 13, 1.5],
       },
     }, labels && labels.id);
-    if (place && !hadView) goToPlace();
+    if (place && !hadView && !openPopup) goToPlace();     // not if a building was opened while the map loaded
 
     map.on("click", "sales", (e) => {
       showBuilding(data.buildings[e.features[0].properties.i]);

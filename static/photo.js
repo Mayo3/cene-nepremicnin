@@ -1,6 +1,7 @@
 // A building's photo from Street View, requested only when a visitor asks for it. Used by map.js and by the sale
 // tables, whose rows carry data-at="lat,lon". Without a key (data-streetview-key on <body>) there are no photos and
-// no buttons; where Google has no imagery (return_error_code makes that a 404) a short note takes the photo's place.
+// the tables get no buttons; where Google has no imagery (return_error_code makes that a 404) a short note takes the
+// photo's place. A link to Street View is always there.
 (() => {
   window.buildingPhoto = (at, address) => {
     const box = document.createElement("div");
@@ -17,6 +18,12 @@
       caption.textContent = "Približen pogled s ceste, ne prodano stanovanje.";
       box.append(img, caption);
     }
+    const link = document.createElement("a");
+    link.href = "https://www.google.com/maps/@?" + new URLSearchParams({ api: "1", map_action: "pano", viewpoint: at });
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Odpri v Street View ↗";
+    box.append(link);
     return box;
   };
 
